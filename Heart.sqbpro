@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?><sqlb_project><db path="C:/Users/Duong/Downloads/Heart_Disease.db" readonly="0" foreign_keys="" case_sensitive_like="" temp_store="" wal_autocheckpoint="" synchronous=""/><attached/><window><main_tabs open="structure browser pragmas query" current="3"/></window><tab_structure><column_width id="0" width="300"/><column_width id="1" width="0"/><column_width id="2" width="100"/><column_width id="3" width="1605"/><column_width id="4" width="0"/></tab_structure><tab_browse><current_table name="0,0:"/><default_encoding codec=""/><browse_table_settings/></tab_browse><tab_sql><sql name="SQL 1">-- Total number of positive cases and negative cases for each gender
+SELECT Sex, SUM((HeartDisease = 1)) as PositiveResult, SUM(HeartDisease=0) as NegativeResult
+FROM heart
+Group by Sex
+HAVING (age &gt; 20)
+
+-- Likelihood of having heart stroke for high Cholesterol people
+WITH AvgCholesterol AS (
+    SELECT AVG(Cholesterol) AS AvgCholesterol
+    FROM heart
+)
+SELECT 
+    COUNT(*) AS 'Total People', 
+    SUM(Cholesterol &gt; ac.AvgCholesterol) AS 'High Cholesterol', 
+    SUM(Cholesterol &lt; ac.AvgCholesterol) AS 'Low Cholesterol',
+	round(SUM(Cholesterol &gt;  ac.AvgCholesterol AND HeartDisease = 1)*1.0 / SUM(Cholesterol &gt;  ac.AvgCholesterol) * 1.0, 4) AS 'PercentageHighCholesterolWithStroke',
+	round(SUM(Cholesterol &lt;  ac.AvgCholesterol AND HeartDisease = 1)*1.0 / SUM(Cholesterol &lt;  ac.AvgCholesterol) * 1.0, 4) AS 'PercentageLowCholesterolWithStroke'
+FROM 
+    heart
+CROSS JOIN
+    AvgCholesterol ac;
+
+-- Likelihood of having heart stroke for ExerciseAngina people
+SELECT 
+    COUNT(*) AS 'Total People', 
+    SUM(ExerciseAngina = 'Y') AS 'ExerciseAngina', 
+    SUM(ExerciseAngina = 'N') AS 'NoExerciseAngina',
+    ROUND(SUM(CASE WHEN ExerciseAngina = 'Y' AND HeartDisease = 1 THEN 1 ELSE 0 END) * 1.0 / SUM(HeartDisease = 1), 4) AS 'PercentageExerciseAnginaWithHeartDisease',
+    ROUND(SUM(CASE WHEN ExerciseAngina = 'N' AND HeartDisease = 1 THEN 1 ELSE 0 END) * 1.0 / SUM(HeartDisease = 1), 4) AS 'PercentageNoExerciseAnginaWithHeartDisease'
+FROM 
+    heart;
+	
+-- Age group with higest exercise-induced angina
+WITH Age AS (
+    SELECT age, COUNT(age) AS TotalNumberOfPeopleThatAge
+    FROM heart
+    GROUP BY age
+)
+SELECT
+    a.age,
+    a.TotalNumberOfPeopleThatAge,
+	COUNT(CASE WHEN h.ExerciseAngina = 'Y' THEN 'N' END) AS TotalExerciseInducedAngina
+FROM
+    Age a
+JOIN
+    heart h ON a.age = h.age
+GROUP BY
+    a.age, a.TotalNumberOfPeopleThatAge
+ORDER BY
+    TotalExerciseInducedAngina DESC
+	
+-- Age group with higest average heart rate
+WITH Age AS (
+    SELECT age, COUNT(age) AS TotalNumberOfPeopleThatAge
+    FROM heart
+    GROUP BY age
+)
+SELECT
+    a.age,
+    a.TotalNumberOfPeopleThatAge,
+    ROUND(AVG(h.MaxHR), 2) AS AverageHeartRate
+FROM
+    Age a
+JOIN
+    heart h ON a.age = h.age
+WHERE
+    a.TotalNumberOfPeopleThatAge &gt; 10
+GROUP BY
+    a.age, a.TotalNumberOfPeopleThatAge
+ORDER BY
+    AverageHeartRate DESC;
+	
+--Percentage of people who experience heartstroke who also has HeartDisease
+SELECT
+	SUM(stroke = 1) as &quot;Stroke&quot;,
+	round(SUM(heart_disease = 1 AND stroke = 1) * 1.0/ SUM(stroke = 1), 4) as &quot;WithHeartDisease&quot;,
+	round(SUM(heart_disease = 0 AND stroke = 1) * 1.0/ SUM(stroke = 1), 4) as &quot;WithoutHeartDisease&quot;
+FROM healthcare
+
+--Showing patient who is older than 50 years old, don't smoke, male
+SELECT age, gender, smoking_status, stroke
+FROM healthcare
+WHERE
+	age &gt; 50 AND gender = 'Male'
+	AND smoking_status = 'never smoked'
+	AND stroke = 1
+
+</sql><current_tab id="0"/></tab_sql></sqlb_project>
